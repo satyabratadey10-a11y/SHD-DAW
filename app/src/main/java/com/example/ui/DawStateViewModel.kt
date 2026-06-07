@@ -19,6 +19,9 @@ class DawStateViewModel : ViewModel() {
     private val _mutes = MutableStateFlow(listOf(false, false, false, false))
     val mutes: StateFlow<List<Boolean>> = _mutes.asStateFlow()
 
+    private val _isRecording = MutableStateFlow(false)
+    val isRecording: StateFlow<Boolean> = _isRecording.asStateFlow()
+
     fun togglePlay() {
         if (_isPlaying.value) {
             NativeAudioInterface.stopEngine()
@@ -50,5 +53,15 @@ class DawStateViewModel : ViewModel() {
         newMutes[index] = isMuted
         _mutes.value = newMutes
         NativeAudioInterface.setPluginParameter(index, 2, if (isMuted) 1.0f else 0.0f)
+    }
+
+    fun toggleRecording(cacheDir: java.io.File) {
+        if (_isRecording.value) {
+            NativeAudioInterface.stopRecording()
+        } else {
+            val file = java.io.File(cacheDir, "recording_${System.currentTimeMillis()}.wav")
+            NativeAudioInterface.startRecording(file.absolutePath)
+        }
+        _isRecording.value = !_isRecording.value
     }
 }

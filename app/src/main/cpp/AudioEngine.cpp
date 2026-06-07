@@ -60,8 +60,21 @@ void AudioEngine::setPluginParameter(int pluginId, int paramId, float value) {
     }
 }
 
+void AudioEngine::startRecording(const std::string& filePath) {
+    mWavWriter.startRecording(filePath, mSampleRate, mStream ? mStream->getChannelCount() : 2);
+}
+
+void AudioEngine::stopRecording() {
+    mWavWriter.stopRecording();
+}
+
 oboe::DataCallbackResult AudioEngine::onAudioReady(oboe::AudioStream *oboeStream, void *audioData, int32_t numFrames) {
     float* floatData = static_cast<float*>(audioData);
     mMixer.processBlock(floatData, numFrames);
+    
+    if (mWavWriter.isRecording()) {
+        mWavWriter.pushAudio(floatData, numFrames);
+    }
+    
     return oboe::DataCallbackResult::Continue;
 }

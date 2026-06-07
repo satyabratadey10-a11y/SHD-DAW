@@ -14,4 +14,6 @@ object NativeAudioInterface {
     external fun setBPM(bpm: Int)
     external fun triggerSample(pluginId: Int)
     external fun setPluginParameter(pluginId: Int, paramId: Int, value: Float)
+    external fun startRecording(filePath: String)
+    external fun stopRecording()
 }

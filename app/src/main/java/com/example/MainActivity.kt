@@ -5,6 +5,8 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
@@ -48,12 +50,26 @@ class MainActivity : ComponentActivity() {
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         val isPlaying by viewModel.isPlaying.collectAsState()
+                        val isRecording by viewModel.isRecording.collectAsState()
                         
-                        Button(
-                            onClick = { viewModel.togglePlay() },
-                            modifier = Modifier.padding(16.dp)
+                        Row(
+                            modifier = Modifier.padding(16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
-                            Text(if (isPlaying) "Stop Engine" else "Start Engine")
+                            Button(
+                                onClick = { viewModel.togglePlay() }
+                            ) {
+                                Text(if (isPlaying) "Stop Engine" else "Start Engine")
+                            }
+                            
+                            Button(
+                                onClick = { viewModel.toggleRecording(baseContext.cacheDir) },
+                                colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                                    containerColor = if (isRecording) androidx.compose.material3.MaterialTheme.colorScheme.error else androidx.compose.material3.MaterialTheme.colorScheme.primary
+                                )
+                            ) {
+                                Text(if (isRecording) "Stop Recording" else "Record")
+                            }
                         }
                         
                         MixerScreen(viewModel = viewModel)

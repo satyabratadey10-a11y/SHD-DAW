@@ -9,6 +9,7 @@ add_library(${CMAKE_PROJECT_NAME} SHARED
         SamplerPlugin.cpp
         VolumePlugin.cpp
         Mixer.cpp
+        WavWriter.cpp
 )
 
 target_link_libraries(${CMAKE_PROJECT_NAME}
