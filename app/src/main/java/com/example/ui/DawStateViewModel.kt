@@ -1,67 +1,208 @@
 package com.example.ui
 
 import androidx.lifecycle.ViewModel
-import com.example.NativeAudioInterface
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+import kotlin.math.roundToInt
+
+data class MidiNote(
+    val id: String = java.util.UUID.randomUUID().toString(),
+    val startTick: Int,
+    val durationTicks: Int,
+    val noteValue: Int,
+    val velocity: Float = 1.0f,
+    val isSelected: Boolean = false
+)
+
+data class Clip(
+    val id: String = java.util.UUID.randomUUID().toString(),
+    val trackId: String,
+    val name: String,
+    val startTick: Int,
+    val durationTicks: Int,
+    val notes: List<MidiNote> = emptyList()
+)
+
+enum class SnapMode(val ticks: Int) {
+    BAR(1920),
+    HALF(960),
+    QUARTER(480),
+    EIGHTH(240),
+    SIXTEENTH(120),
+    OFF(1)
+}
 
 class DawStateViewModel : ViewModel() {
+    private val _clips = MutableStateFlow<List<Clip>>(
+        listOf(Clip(trackId = "track1", name = "Pattern 1", startTick = 0, durationTicks = 1920 * 4,
+            notes = listOf(
+                MidiNote(startTick = 0, durationTicks = 480, noteValue = 60),
+                MidiNote(startTick = 480, durationTicks = 480, noteValue = 64),
+                MidiNote(startTick = 960, durationTicks = 480, noteValue = 67),
+                MidiNote(startTick = 1440, durationTicks = 480, noteValue = 72)
+            )))
+    )
+    val clips = _clips.asStateFlow()
+
+    private val _engineTick = MutableStateFlow(0)
+    val engineTick = _engineTick.asStateFlow()
+
+    private val _snapMode = MutableStateFlow(SnapMode.QUARTER)
+    val snapMode = _snapMode.asStateFlow()
+
     private val _isPlaying = MutableStateFlow(false)
-    val isPlaying: StateFlow<Boolean> = _isPlaying.asStateFlow()
+    val isPlaying = _isPlaying.asStateFlow()
 
-    private val _bpm = MutableStateFlow(120)
-    val bpm: StateFlow<Int> = _bpm.asStateFlow()
-
-    private val _volumes = MutableStateFlow(listOf(1.0f, 1.0f, 1.0f, 1.0f))
-    val volumes: StateFlow<List<Float>> = _volumes.asStateFlow()
-
-    private val _mutes = MutableStateFlow(listOf(false, false, false, false))
-    val mutes: StateFlow<List<Boolean>> = _mutes.asStateFlow()
-
-    private val _isRecording = MutableStateFlow(false)
-    val isRecording: StateFlow<Boolean> = _isRecording.asStateFlow()
+    private val _clipboardNotes = MutableStateFlow<List<MidiNote>>(emptyList())
 
     fun togglePlay() {
-        if (_isPlaying.value) {
-            NativeAudioInterface.stopEngine()
-        } else {
-            NativeAudioInterface.startEngine()
-        }
         _isPlaying.value = !_isPlaying.value
     }
 
-    fun setBpm(newBpm: Int) {
-        _bpm.value = newBpm
-        NativeAudioInterface.setBPM(newBpm)
+    fun setSnapMode(mode: SnapMode) {
+        _snapMode.value = mode
     }
 
-    fun triggerSample(index: Int) {
-        NativeAudioInterface.triggerSample(index)
+    fun updateEngineTick(tick: Int) {
+        _engineTick.value = tick
     }
 
-    fun setVolume(index: Int, volume: Float) {
-        val newVolumes = _volumes.value.toMutableList()
-        newVolumes[index] = volume
-        _volumes.value = newVolumes
-        NativeAudioInterface.setPluginParameter(index, 0, volume)
+    private fun getActiveClip(): Clip? {
+        return _clips.value.firstOrNull() // For demo purposes we just use the first clip
     }
 
-    fun toggleMute(index: Int) {
-        val newMutes = _mutes.value.toMutableList()
-        val isMuted = !newMutes[index]
-        newMutes[index] = isMuted
-        _mutes.value = newMutes
-        NativeAudioInterface.setPluginParameter(index, 2, if (isMuted) 1.0f else 0.0f)
-    }
-
-    fun toggleRecording(cacheDir: java.io.File) {
-        if (_isRecording.value) {
-            NativeAudioInterface.stopRecording()
-        } else {
-            val file = java.io.File(cacheDir, "recording_${System.currentTimeMillis()}.wav")
-            NativeAudioInterface.startRecording(file.absolutePath)
+    private inline fun mutateActiveClip(transform: (Clip) -> Clip) {
+        _clips.update { currentClips ->
+            if (currentClips.isEmpty()) return@update currentClips
+            val newClips = currentClips.toMutableList()
+            newClips[0] = transform(newClips[0])
+            newClips
         }
-        _isRecording.value = !_isRecording.value
+    }
+
+    fun updateNoteSelection(selectionMap: Map<String, Boolean>) {
+        mutateActiveClip { clip ->
+            clip.copy(notes = clip.notes.map { note ->
+                selectionMap[note.id]?.let { isSelected ->
+                    note.copy(isSelected = isSelected)
+                } ?: note
+            })
+        }
+    }
+
+    fun selectAllNotesInMarquee(minTick: Int, maxTick: Int, minNote: Int, maxNote: Int) {
+        mutateActiveClip { clip ->
+            clip.copy(notes = clip.notes.map { note ->
+                val noteEndTick = note.startTick + note.durationTicks
+                val intersectsHorizontally = (note.startTick < maxTick && noteEndTick > minTick)
+                val intersectsVertically = (note.noteValue in minNote..maxNote)
+                
+                note.copy(isSelected = (intersectsHorizontally && intersectsVertically))
+            })
+        }
+    }
+
+    fun deselectAllNotes() {
+        mutateActiveClip { clip ->
+            clip.copy(notes = clip.notes.map { it.copy(isSelected = false) })
+        }
+    }
+
+    fun selectNoteExclusively(noteId: String) {
+        mutateActiveClip { clip ->
+            clip.copy(notes = clip.notes.map { it.copy(isSelected = (it.id == noteId)) })
+        }
+    }
+
+    fun toggleNoteSelection(noteId: String) {
+        mutateActiveClip { clip ->
+            clip.copy(notes = clip.notes.map { 
+                if (it.id == noteId) it.copy(isSelected = !it.isSelected) else it 
+            })
+        }
+    }
+    
+    fun applyNoteDelta(deltaTicks: Int, deltaNoteValue: Int) {
+        val snapStep = if (snapMode.value != SnapMode.OFF) snapMode.value.ticks else 1
+        mutateActiveClip { clip ->
+            clip.copy(notes = clip.notes.map { note ->
+                if (note.isSelected) {
+                    val rawStart = note.startTick + deltaTicks
+                    val rawNote = note.noteValue + deltaNoteValue
+                    
+                    val snappedStart = ((rawStart.toFloat() / snapStep).roundToInt() * snapStep).coerceAtLeast(0)
+                    val targetNoteValue = rawNote.coerceIn(0, 127)
+                    
+                    note.copy(startTick = snappedStart, noteValue = targetNoteValue)
+                } else note
+            })
+        }
+    }
+
+    fun setNoteDuration(noteId: String, newDurationRaw: Int) {
+        val snapStep = if (snapMode.value != SnapMode.OFF) snapMode.value.ticks else 1
+        val snappedDuration = ((newDurationRaw.toFloat() / snapStep).roundToInt() * snapStep).coerceAtLeast(snapStep)
+        
+        mutateActiveClip { clip ->
+            clip.copy(notes = clip.notes.map { note ->
+                if (note.id == noteId || note.isSelected) {
+                    note.copy(durationTicks = snappedDuration)
+                } else note
+            })
+        }
+    }
+
+    fun resizeSelectedNotesDelta(deltaTicks: Int) {
+        val snapStep = if (snapMode.value != SnapMode.OFF) snapMode.value.ticks else 1
+        mutateActiveClip { clip ->
+            clip.copy(notes = clip.notes.map { note ->
+                if (note.isSelected) {
+                    val rawDuration = note.durationTicks + deltaTicks
+                    val snappedDuration = ((rawDuration.toFloat() / snapStep).roundToInt() * snapStep).coerceAtLeast(snapStep)
+                    note.copy(durationTicks = snappedDuration)
+                } else note
+            })
+        }
+    }
+
+    // Contextual Action Menu Commands
+    fun copySelectedNotes() {
+        val clip = getActiveClip() ?: return
+        _clipboardNotes.value = clip.notes.filter { it.isSelected }.map { it.copy() }
+    }
+
+    fun deleteSelectedNotes() {
+        mutateActiveClip { clip ->
+            clip.copy(notes = clip.notes.filter { !it.isSelected })
+        }
+    }
+
+    fun snapSelectedNotes() {
+        val snapStep = if (snapMode.value != SnapMode.OFF) snapMode.value.ticks else return
+        mutateActiveClip { clip ->
+            clip.copy(notes = clip.notes.map { note ->
+                if (note.isSelected) {
+                    val snappedStart = ((note.startTick.toFloat() / snapStep).roundToInt() * snapStep).coerceAtLeast(0)
+                    note.copy(startTick = snappedStart)
+                } else note
+            })
+        }
+    }
+
+    fun addNote(noteValue: Int, rawStartTick: Int) {
+        val snapStep = if (snapMode.value != SnapMode.OFF) snapMode.value.ticks else 1
+        val snappedStart = ((rawStartTick.toFloat() / snapStep).roundToInt() * snapStep).coerceAtLeast(0)
+        
+        val newNote = MidiNote(
+            startTick = snappedStart,
+            durationTicks = snapStep.coerceAtLeast(120),
+            noteValue = noteValue,
+            isSelected = true
+        )
+        mutateActiveClip { clip ->
+            clip.copy(notes = clip.notes + newNote)
+        }
     }
 }

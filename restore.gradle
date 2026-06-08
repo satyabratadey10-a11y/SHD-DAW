@@ -1,0 +1,10 @@
+task restore {
+    doLast {
+        exec {
+            commandLine "git", "checkout", "."
+        }
+        exec {
+            commandLine "git", "clean", "-fd"
+        }
+    }
+}
