@@ -2,10 +2,18 @@ package com.example.ui
 
 import androidx.lifecycle.ViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlin.math.roundToInt
+import java.io.File
+import org.json.JSONObject
+import org.json.JSONArray
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+
+enum class DawView {
+    PLAYLIST, BROWSER, PIANO_ROLL
+}
 
 data class MidiNote(
     val id: String = java.util.UUID.randomUUID().toString(),
@@ -55,10 +63,113 @@ class DawStateViewModel : ViewModel() {
     private val _isPlaying = MutableStateFlow(false)
     val isPlaying = _isPlaying.asStateFlow()
 
+    private val _currentView = MutableStateFlow(DawView.PLAYLIST)
+    val currentView = _currentView.asStateFlow()
+
     private val _clipboardNotes = MutableStateFlow<List<MidiNote>>(emptyList())
 
     fun togglePlay() {
         _isPlaying.value = !_isPlaying.value
+        NativeAudioInterface.togglePlayback(_isPlaying.value)
+    }
+
+    fun setNoteVelocity(noteId: String, velocity: Float) {
+        val boundedVelocity = velocity.coerceIn(0f, 1f)
+        mutateActiveClip { clip ->
+            clip.copy(notes = clip.notes.map { note ->
+                if (note.id == noteId) {
+                    NativeAudioInterface.updateNoteVelocity(note.id, boundedVelocity)
+                    note.copy(velocity = boundedVelocity)
+                } else note
+            })
+        }
+    }
+
+    fun setView(view: DawView) {
+        _currentView.value = view
+    }
+
+    fun createNewProject() {
+        _clips.value = emptyList()
+        NativeAudioInterface.resetEngine()
+        setView(DawView.PLAYLIST)
+    }
+
+    suspend fun saveProject(file: File) {
+        withContext(Dispatchers.IO) {
+            val root = JSONObject()
+            val clipsArray = JSONArray()
+            _clips.value.forEach { clip ->
+                val clipObj = JSONObject()
+                clipObj.put("id", clip.id)
+                clipObj.put("trackId", clip.trackId)
+                clipObj.put("name", clip.name)
+                clipObj.put("startTick", clip.startTick)
+                clipObj.put("durationTicks", clip.durationTicks)
+
+                val notesArray = JSONArray()
+                clip.notes.forEach { note ->
+                    val noteObj = JSONObject()
+                    noteObj.put("id", note.id)
+                    noteObj.put("startTick", note.startTick)
+                    noteObj.put("durationTicks", note.durationTicks)
+                    noteObj.put("noteValue", note.noteValue)
+                    noteObj.put("velocity", note.velocity.toDouble())
+                    notesArray.put(noteObj)
+                }
+                clipObj.put("notes", notesArray)
+                clipsArray.put(clipObj)
+            }
+            root.put("clips", clipsArray)
+            file.writeText(root.toString())
+        }
+    }
+
+    suspend fun loadProject(file: File) {
+        withContext(Dispatchers.IO) {
+            try {
+                if (!file.exists()) return@withContext
+                val root = JSONObject(file.readText())
+                val clipsArray = root.optJSONArray("clips") ?: JSONArray()
+                val loadedClips = mutableListOf<Clip>()
+                
+                for (i in 0 until clipsArray.length()) {
+                    val clipObj = clipsArray.getJSONObject(i)
+                    val notesArray = clipObj.optJSONArray("notes") ?: JSONArray()
+                    val loadedNotes = mutableListOf<MidiNote>()
+                    
+                    for (j in 0 until notesArray.length()) {
+                        val noteObj = notesArray.getJSONObject(j)
+                        loadedNotes.add(
+                            MidiNote(
+                                id = noteObj.getString("id"),
+                                startTick = noteObj.getInt("startTick"),
+                                durationTicks = noteObj.getInt("durationTicks"),
+                                noteValue = noteObj.getInt("noteValue"),
+                                velocity = noteObj.optDouble("velocity", 1.0).toFloat(),
+                                isSelected = false
+                            )
+                        )
+                    }
+                    
+                    loadedClips.add(
+                        Clip(
+                            id = clipObj.getString("id"),
+                            trackId = clipObj.getString("trackId"),
+                            name = clipObj.getString("name"),
+                            startTick = clipObj.getInt("startTick"),
+                            durationTicks = clipObj.getInt("durationTicks"),
+                            notes = loadedNotes
+                        )
+                    )
+                }
+                _clips.value = loadedClips
+                NativeAudioInterface.resetEngine()
+                setView(DawView.PLAYLIST)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
     }
 
     fun setSnapMode(mode: SnapMode) {

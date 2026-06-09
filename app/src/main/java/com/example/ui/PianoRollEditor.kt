@@ -8,6 +8,9 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -41,7 +44,6 @@ fun PianoRollEditor(
     val clips by viewModel.clips.collectAsState()
     val activeClip = clips.firstOrNull() ?: return
     val notes = activeClip.notes
-    val engineTick by viewModel.engineTick.collectAsState()
     val isPlaying by viewModel.isPlaying.collectAsState()
     val snapMode by viewModel.snapMode.collectAsState()
 
@@ -64,17 +66,12 @@ fun PianoRollEditor(
     val gridHeight = 128 * noteHeightPx
 
     // Playhead auto-scroll
-    val playheadX = engineTick * pixelsPerTick
-    LaunchedEffect(playheadX, isPlaying) {
-        if (isPlaying) {
-            val viewWidth = 1000f // Approximate width, ideally use onGloballyPositioned
-            if (playheadX > viewportScrollX + viewWidth * 0.8f) {
-                viewportScrollX = max(0f, playheadX - viewWidth * 0.2f)
-            }
-        }
+    val engineTickState = viewModel.engineTick.collectAsState()
+    LaunchedEffect(isPlaying) {
+        // Auto scroll could be implemented here manually observing the flow if needed
     }
 
-    Box(modifier = modifier.fillMaxSize().background(Color(0xFF1E1E24))) {
+    Column(modifier = modifier.fillMaxSize().background(Color(0xFF1E1E24))) {
         
         // Toolbar
         Row(modifier = Modifier.fillMaxWidth().height(48.dp).background(Color(0xFF2B2B36)).padding(8.dp),
@@ -84,8 +81,15 @@ fun PianoRollEditor(
                 Text("Select Mode: ${if (isSelectionMode) "ON" else "OFF"}")
             }
             Spacer(modifier = Modifier.width(16.dp))
-            Button(onClick = { viewModel.togglePlay() }) {
-                Text(if (isPlaying) "Stop" else "Play")
+            IconButton(onClick = { viewModel.togglePlay() }) {
+                if (isPlaying) {
+                    Canvas(modifier = Modifier.size(24.dp)) {
+                        drawRect(Color.White, topLeft = Offset(6.dp.toPx(), 4.dp.toPx()), size = Size(4.dp.toPx(), 16.dp.toPx()))
+                        drawRect(Color.White, topLeft = Offset(14.dp.toPx(), 4.dp.toPx()), size = Size(4.dp.toPx(), 16.dp.toPx()))
+                    }
+                } else {
+                    Icon(androidx.compose.material.icons.Icons.Filled.PlayArrow, contentDescription = "Play", tint = Color.White)
+                }
             }
             Spacer(modifier = Modifier.width(16.dp))
             Text("Snap: ${snapMode.name}", color = Color.White)
@@ -94,8 +98,8 @@ fun PianoRollEditor(
         // Piano Roll Grid & Notes Area
         Box(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(top = 48.dp)
+                .weight(1f)
+                .fillMaxWidth()
                 .pointerInput(isSelectionMode) {
                     if (isSelectionMode) {
                         detectDragGestures(
@@ -136,7 +140,16 @@ fun PianoRollEditor(
                                 val y = offset.y + viewportScrollY
                                 val clickTick = (x / pixelsPerTick).toInt()
                                 val clickNote = 127 - (y / noteHeightPx).toInt()
-                                viewModel.addNote(clickNote, clickTick)
+                                
+                                val hitNote = notes.firstOrNull { note ->
+                                    clickTick in note.startTick..(note.startTick + note.durationTicks) &&
+                                    clickNote == note.noteValue
+                                }
+                                if (hitNote != null) {
+                                    viewModel.toggleNoteSelection(hitNote.id)
+                                } else {
+                                    viewModel.addNote(clickNote, clickTick)
+                                }
                             }
                         )
                     }
@@ -262,7 +275,7 @@ fun PianoRollEditor(
                 val y = (127 - note.noteValue) * noteHeightPx - viewportScrollY
                 val width = note.durationTicks * pixelsPerTick
 
-                if (x + width > 0 && x < size.width && y > -noteHeightPx && y < size.height) {
+                if (x + width > 0 && y > -noteHeightPx) {
                     // Update bounding box for contextual menu
                     LaunchedEffect(note) {
                         if (selectedBoundsContext == null) {
@@ -282,10 +295,19 @@ fun PianoRollEditor(
                             .offset { IntOffset((x + width - handleRadiusPx*2).toInt(), (y + noteHeightPx/2f - handleRadiusPx*2).toInt()) }
                             .size((handleRadiusPx*4).dp / density.density)
                             .pointerInput(note.id) {
-                                detectDragGestures { change, dragAmount ->
-                                    val deltaTicks = (dragAmount.x / pixelsPerTick).toInt()
-                                    viewModel.resizeSelectedNotesDelta(deltaTicks)
-                                }
+                                var accumulatedDeltaX = 0f
+                                detectDragGestures(
+                                    onDragStart = { accumulatedDeltaX = 0f },
+                                    onDrag = { change, dragAmount ->
+                                        // Accumulated delta logic
+                                        accumulatedDeltaX += dragAmount.x
+                                        if (kotlin.math.abs(accumulatedDeltaX) >= pixelsPerTick / 2f) {
+                                            val deltaTicks = (accumulatedDeltaX / pixelsPerTick).toInt()
+                                            viewModel.resizeSelectedNotesDelta(deltaTicks)
+                                            accumulatedDeltaX -= (deltaTicks * pixelsPerTick)
+                                        }
+                                    }
+                                )
                             }
                     )
                 }
@@ -313,23 +335,88 @@ fun PianoRollEditor(
             }
 
             // Playhead Layer (Isolated)
-            Canvas(modifier = Modifier.fillMaxSize()) {
-                val px = playheadX - viewportScrollX
-                if (px in 0f..size.width) {
+            Spacer(modifier = Modifier.fillMaxSize().drawBehind {
+                val currentTick = engineTickState.value
+                val playheadPx = currentTick * pixelsPerTick - viewportScrollX
+                // auto-scroll
+                if (isPlaying) {
+                    val viewWidth = 1000f 
+                    // This is handled in composition ideally, but we isolate playhead
+                }
+
+                if (playheadPx in 0f..size.width) {
                     drawLine(
-                        color = Color(0xFF64B5F6),
-                        start = Offset(px, 0f),
-                        end = Offset(px, size.height),
-                        strokeWidth = 3f
+                        color = Color.White,
+                        start = Offset(playheadPx, 0f),
+                        end = Offset(playheadPx, size.height),
+                        strokeWidth = 1.5.dp.toPx()
                     )
                     // Playhead Cap (Inverted Triangle)
                     val path = androidx.compose.ui.graphics.Path().apply {
-                        moveTo(px - 12f, 0f)
-                        lineTo(px + 12f, 0f)
-                        lineTo(px, 20f)
+                        moveTo(playheadPx - 12f, 0f)
+                        lineTo(playheadPx + 12f, 0f)
+                        lineTo(playheadPx, 20f)
                         close()
                     }
-                    drawPath(path = path, color = Color(0xFF64B5F6))
+                    drawPath(path = path, color = Color.White)
+                }
+            })
+        }
+
+        // Velocity Drawer
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(100.dp)
+                .background(Color(0xFF202028))
+                .pointerInput(Unit) {
+                    detectDragGestures { change, _ ->
+                        val x = change.position.x + viewportScrollX
+                        val y = change.position.y
+                        
+                        val clickTick = (x / pixelsPerTick).toInt()
+                        val heightPx = 100.dp.toPx()
+                        val velocity = (1f - (y / heightPx)).coerceIn(0f, 1f)
+                        
+                        val hitNote = notes.firstOrNull { note ->
+                            clickTick in note.startTick..(note.startTick + note.durationTicks)
+                        }
+                        hitNote?.let {
+                            viewModel.setNoteVelocity(it.id, velocity)
+                        }
+                    }
+                }
+                .pointerInput(Unit) {
+                    detectTapGestures(
+                        onTap = { offset ->
+                            val x = offset.x + viewportScrollX
+                            val y = offset.y
+                            val heightPx = 100.dp.toPx()
+                            val velocity = (1f - (y / heightPx)).coerceIn(0f, 1f)
+                            val clickTick = (x / pixelsPerTick).toInt()
+                            val hitNote = notes.firstOrNull { note ->
+                                clickTick in note.startTick..(note.startTick + note.durationTicks)
+                            }
+                            hitNote?.let {
+                                viewModel.setNoteVelocity(it.id, velocity)
+                            }
+                        }
+                    )
+                }
+        ) {
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                notes.forEach { note ->
+                    val x = note.startTick * pixelsPerTick - viewportScrollX
+                    val width = 10.dp.toPx() // Fader bar width
+                    
+                    if (x + width > 0 && x < size.width) {
+                        val barHeight = note.velocity * size.height
+                        drawRect(
+                            color = if (note.isSelected) Color(0xFFFF4081) else Color(0xFF00E5FF),
+                            topLeft = Offset(x, size.height - barHeight),
+                            size = Size(width, barHeight)
+                        )
+                    }
                 }
             }
         }

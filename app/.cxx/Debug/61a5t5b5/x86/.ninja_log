@@ -1,0 +1,6 @@
+# ninja log v5
+0	72	1780999504067215083	CMakeFiles/soniccore.dir/native-lib.cpp.o	cdaa10f87b7d6c17
+72	121	1780999504114899830	/app/applet/app/build/intermediates/cxx/Debug/61a5t5b5/obj/x86/libsoniccore.so	3df5965748ec4a9d
+0	6	0	clean	63b023b1f43ca8f7
+14	197	1781000091148742351	CMakeFiles/soniccore.dir/native-lib.cpp.o	cdaa10f87b7d6c17
+197	284	1781000091233431494	/app/applet/app/build/intermediates/cxx/Debug/61a5t5b5/obj/x86/libsoniccore.so	3df5965748ec4a9d
