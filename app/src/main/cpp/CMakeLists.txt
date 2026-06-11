@@ -4,7 +4,12 @@ project("soniccore")
 add_library(
         soniccore
         SHARED
-        native-lib.cpp)
+        native-lib.cpp
+        AutomationManager.cpp
+        Mixer.cpp
+        AudioEngine.cpp)
+
+find_package(oboe REQUIRED CONFIG)
 
 find_library(
         log-lib
@@ -12,4 +17,5 @@ find_library(
 
 target_link_libraries(
         soniccore
+        oboe::oboe
         ${log-lib})

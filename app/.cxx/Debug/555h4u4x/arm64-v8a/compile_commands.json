@@ -1,0 +1,22 @@
+[
+{
+  "directory": "/app/applet/app/.cxx/Debug/555h4u4x/arm64-v8a",
+  "command": "/opt/android/sdk/ndk/27.0.12077973/toolchains/llvm/prebuilt/linux-x86_64/bin/clang++ --target=aarch64-none-linux-android26 --sysroot=/opt/android/sdk/ndk/27.0.12077973/toolchains/llvm/prebuilt/linux-x86_64/sysroot -Dsoniccore_EXPORTS -isystem /opt/gradle/.gradle/caches/9.3.1/transforms/533f422b079a57b682a763181f1bc1a2/transformed/oboe-1.8.0/prefab/modules/oboe/include -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -std=c++17 -DANDROID -fdata-sections -ffunction-sections -fno-limit-debug-info  -fPIC -o CMakeFiles/soniccore.dir/native-lib.cpp.o -c /app/applet/app/src/main/cpp/native-lib.cpp",
+  "file": "/app/applet/app/src/main/cpp/native-lib.cpp"
+},
+{
+  "directory": "/app/applet/app/.cxx/Debug/555h4u4x/arm64-v8a",
+  "command": "/opt/android/sdk/ndk/27.0.12077973/toolchains/llvm/prebuilt/linux-x86_64/bin/clang++ --target=aarch64-none-linux-android26 --sysroot=/opt/android/sdk/ndk/27.0.12077973/toolchains/llvm/prebuilt/linux-x86_64/sysroot -Dsoniccore_EXPORTS -isystem /opt/gradle/.gradle/caches/9.3.1/transforms/533f422b079a57b682a763181f1bc1a2/transformed/oboe-1.8.0/prefab/modules/oboe/include -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -std=c++17 -DANDROID -fdata-sections -ffunction-sections -fno-limit-debug-info  -fPIC -o CMakeFiles/soniccore.dir/AutomationManager.cpp.o -c /app/applet/app/src/main/cpp/AutomationManager.cpp",
+  "file": "/app/applet/app/src/main/cpp/AutomationManager.cpp"
+},
+{
+  "directory": "/app/applet/app/.cxx/Debug/555h4u4x/arm64-v8a",
+  "command": "/opt/android/sdk/ndk/27.0.12077973/toolchains/llvm/prebuilt/linux-x86_64/bin/clang++ --target=aarch64-none-linux-android26 --sysroot=/opt/android/sdk/ndk/27.0.12077973/toolchains/llvm/prebuilt/linux-x86_64/sysroot -Dsoniccore_EXPORTS -isystem /opt/gradle/.gradle/caches/9.3.1/transforms/533f422b079a57b682a763181f1bc1a2/transformed/oboe-1.8.0/prefab/modules/oboe/include -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -std=c++17 -DANDROID -fdata-sections -ffunction-sections -fno-limit-debug-info  -fPIC -o CMakeFiles/soniccore.dir/Mixer.cpp.o -c /app/applet/app/src/main/cpp/Mixer.cpp",
+  "file": "/app/applet/app/src/main/cpp/Mixer.cpp"
+},
+{
+  "directory": "/app/applet/app/.cxx/Debug/555h4u4x/arm64-v8a",
+  "command": "/opt/android/sdk/ndk/27.0.12077973/toolchains/llvm/prebuilt/linux-x86_64/bin/clang++ --target=aarch64-none-linux-android26 --sysroot=/opt/android/sdk/ndk/27.0.12077973/toolchains/llvm/prebuilt/linux-x86_64/sysroot -Dsoniccore_EXPORTS -isystem /opt/gradle/.gradle/caches/9.3.1/transforms/533f422b079a57b682a763181f1bc1a2/transformed/oboe-1.8.0/prefab/modules/oboe/include -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -std=c++17 -DANDROID -fdata-sections -ffunction-sections -fno-limit-debug-info  -fPIC -o CMakeFiles/soniccore.dir/AudioEngine.cpp.o -c /app/applet/app/src/main/cpp/AudioEngine.cpp",
+  "file": "/app/applet/app/src/main/cpp/AudioEngine.cpp"
+}
+]

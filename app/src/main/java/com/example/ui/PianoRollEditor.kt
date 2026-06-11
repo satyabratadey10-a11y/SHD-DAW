@@ -95,12 +95,73 @@ fun PianoRollEditor(
             Text("Snap: ${snapMode.name}", color = Color.White)
         }
 
-        // Piano Roll Grid & Notes Area
-        Box(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth()
-                .pointerInput(isSelectionMode) {
+        // Piano Roll Area Container
+        Row(modifier = Modifier.weight(1f).fillMaxWidth()) {
+            
+            // Skeuomorphic Piano Keys Rail
+            Canvas(modifier = Modifier.width(60.dp).fillMaxHeight().background(Color(0xFF1E1E24))) {
+                for (i in 0 until 128) {
+                    val y = i * noteHeightPx - viewportScrollY
+                    if (y in -noteHeightPx..size.height) {
+                        val isBlack = isBlackKey(127 - i)
+                        if (!isBlack) {
+                            val whiteGradient = androidx.compose.ui.graphics.Brush.verticalGradient(
+                                colors = listOf(Color(0xFFF0F0F0), Color(0xFFCCCCCC)),
+                                startY = y, endY = y + noteHeightPx
+                            )
+                            drawRect(
+                                brush = whiteGradient,
+                                topLeft = Offset(0f, y),
+                                size = Size(size.width, noteHeightPx)
+                            )
+                            drawLine(
+                                color = Color(0xFF888888),
+                                start = Offset(0f, y + noteHeightPx),
+                                end = Offset(size.width, y + noteHeightPx),
+                                strokeWidth = 0.5.dp.toPx()
+                            )
+                        }
+                    }
+                }
+                // Draw black keys on top
+                for (i in 0 until 128) {
+                    val y = i * noteHeightPx - viewportScrollY
+                    if (y in -noteHeightPx..size.height) {
+                        val isBlack = isBlackKey(127 - i)
+                        if (isBlack) {
+                            val blackGradient = androidx.compose.ui.graphics.Brush.verticalGradient(
+                                colors = listOf(Color(0xFF444444), Color(0xFF111111)),
+                                startY = y, endY = y + noteHeightPx
+                            )
+                            // Shadow onto adjacent white keys
+                            drawRect(
+                                color = Color.Black.copy(alpha = 0.6f),
+                                topLeft = Offset(size.width * 0.6f, y + 4f),
+                                size = Size(4.dp.toPx(), noteHeightPx + 2f)
+                            )
+                            drawRect(
+                                brush = blackGradient,
+                                topLeft = Offset(0f, y),
+                                size = Size(size.width * 0.6f, noteHeightPx)
+                            )
+                            // Inner gloss highlight for black key
+                            drawLine(
+                                color = Color.White.copy(alpha = 0.2f),
+                                start = Offset(1f, y + 1f),
+                                end = Offset(size.width * 0.6f - 1f, y + 1f),
+                                strokeWidth = 1.dp.toPx()
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Piano Roll Grid & Notes Area
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .pointerInput(isSelectionMode) {
                     if (isSelectionMode) {
                         detectDragGestures(
                             onDragStart = { offset ->
@@ -220,6 +281,29 @@ fun PianoRollEditor(
                             topLeft = Offset(x, y + 2f), // Small padding
                             size = Size(width, noteHeightPx - 4f),
                             cornerRadius = CornerRadius(4.dp.toPx())
+                        )
+                        // 3D Beveled glass edges
+                        val highlightBrush = androidx.compose.ui.graphics.Brush.linearGradient(
+                            colors = listOf(Color.White.copy(alpha=0.6f), Color.Transparent),
+                            start = Offset(x, y+2f), end = Offset(x + width*0.5f, y + 2f + (noteHeightPx-4f)*0.5f)
+                        )
+                        drawRoundRect(
+                            brush = highlightBrush,
+                            topLeft = Offset(x+1.5f, y + 3.5f),
+                            size = Size(width-3f, noteHeightPx - 7f),
+                            cornerRadius = CornerRadius(2.dp.toPx()),
+                            style = Stroke(width = 1.5.dp.toPx())
+                        )
+                        val shadowBrush = androidx.compose.ui.graphics.Brush.linearGradient(
+                            colors = listOf(Color.Transparent, Color.Black.copy(alpha=0.5f)),
+                            start = Offset(x + width*0.5f, y + 2f + (noteHeightPx-4f)*0.5f), end = Offset(x + width, y + noteHeightPx - 2f)
+                        )
+                        drawRoundRect(
+                            brush = shadowBrush,
+                            topLeft = Offset(x+1.5f, y + 3.5f),
+                            size = Size(width-3f, noteHeightPx - 7f),
+                            cornerRadius = CornerRadius(2.dp.toPx()),
+                            style = Stroke(width = 1.5.dp.toPx())
                         )
                         if (note.isSelected) {
                             // Draw boundary
@@ -362,6 +446,7 @@ fun PianoRollEditor(
                 }
             })
         }
+    }
 
         // Velocity Drawer
         Box(

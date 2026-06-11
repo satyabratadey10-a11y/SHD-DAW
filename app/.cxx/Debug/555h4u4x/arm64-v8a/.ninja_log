@@ -1,0 +1,6 @@
+# ninja log v5
+2	1198	1781172059226640907	CMakeFiles/soniccore.dir/Mixer.cpp.o	3dab11c6e0c08ec2
+0	1336	1781172059367866070	CMakeFiles/soniccore.dir/native-lib.cpp.o	9ab8dbedec7b29c4
+1	1407	1781172059436929287	CMakeFiles/soniccore.dir/AutomationManager.cpp.o	d5ec4bd9ad8adfef
+3	1681	1781172059710700173	CMakeFiles/soniccore.dir/AudioEngine.cpp.o	8574a34800c335a7
+1681	1741	1781172059772250420	/app/applet/app/build/intermediates/cxx/Debug/555h4u4x/obj/arm64-v8a/libsoniccore.so	d036e842b4f67915

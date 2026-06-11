@@ -1,0 +1,40 @@
+{
+  "buildFiles": [
+    "/app/applet/app/src/main/cpp/CMakeLists.txt"
+  ],
+  "cleanCommandsComponents": [
+    [
+      "/opt/android/sdk/cmake/3.22.1/bin/ninja",
+      "-C",
+      "/app/applet/app/.cxx/Debug/555h4u4x/arm64-v8a",
+      "clean"
+    ]
+  ],
+  "buildTargetsCommandComponents": [
+    "/opt/android/sdk/cmake/3.22.1/bin/ninja",
+    "-C",
+    "/app/applet/app/.cxx/Debug/555h4u4x/arm64-v8a",
+    "{LIST_OF_TARGETS_TO_BUILD}"
+  ],
+  "libraries": {
+    "soniccore::@6890427a1f51a3e7e1df": {
+      "toolchain": "toolchain",
+      "abi": "arm64-v8a",
+      "artifactName": "soniccore",
+      "output": "/app/applet/app/build/intermediates/cxx/Debug/555h4u4x/obj/arm64-v8a/libsoniccore.so",
+      "runtimeFiles": [
+        "/opt/gradle/.gradle/caches/9.3.1/transforms/533f422b079a57b682a763181f1bc1a2/transformed/oboe-1.8.0/prefab/modules/oboe/libs/android.arm64-v8a/liboboe.so"
+      ]
+    }
+  },
+  "toolchains": {
+    "toolchain": {
+      "cCompilerExecutable": "/opt/android/sdk/ndk/27.0.12077973/toolchains/llvm/prebuilt/linux-x86_64/bin/clang.lld",
+      "cppCompilerExecutable": "/opt/android/sdk/ndk/27.0.12077973/toolchains/llvm/prebuilt/linux-x86_64/bin/clang++.lld"
+    }
+  },
+  "cFileExtensions": [],
+  "cppFileExtensions": [
+    "cpp"
+  ]
+}
